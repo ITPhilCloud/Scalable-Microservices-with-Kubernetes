@@ -570,6 +570,383 @@ sudo docker login
 sudo docker push <your username>/example-monolith:1.0.0
 ```
 
+### Setting up Kubernetes for this course
+
+Use project directory
+
+`cd $GOPATH/src/github.com/udacity/ud615/kubernetes`
+
+### Provision a Kubernetes Cluster with GKE using gcloud
+
+To complete the work in this course you going to need some tools. Kubernetes can be configured with many options and add-ons, but can be time consuming to bootstrap from the ground up. In this section you will bootstrap Kubernetes using Google Container Engine (GKE).
+
+GKE is a hosted Kubernetes by Google. GKE clusters can be customized and supports different machine types, number of nodes, and network settings.
+
+Use the following command to create your cluster for use for the rest of this course.
+
+`gcloud container clusters create k0 `
+
+Above command generated an error:
+
+```bash
+
+```
+
+hence I pivoted to create the cluster manually via the console.
+
+and then configure kubectl command line access by running the following command in cloud shell:
+
+`gcloud container clusters get-credentials k0 --region europe-central2 --project prjtscalablemicrosrvcswithk8s`
+
+Launch a single nginx instance:
+
+`kubectl run nginx --image=nginx:1.10.0`
+
+Get pods
+
+`kubectl get pods`
+
+Output:
+
+```bash
+$ kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+nginx   1/1     Running   0          4m37s
+```
+
+Expose nginx
+
+`kubectl expose pod nginx --port 80 --type LoadBalancer`
+
+List services
+
+`kubectl get services`
+
+Output:
+
+```bash
+$ kubectl get services
+NAME         TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP      34.118.224.1     <none>        443/TCP        32m
+nginx        LoadBalancer   34.118.228.232   <pending>     80:32478/TCP   38s
+```
+
+
+
+
+### Pods Intro
+
+[Pods](https://kubernetes.io/docs/concepts/workloads/pods/)
+
+#### Creating Pods
+
+Explore config file
+
+`cat pods/monolith.yaml`
+
+Create the monolith pod
+
+`kubectl create -f pods/monolith.yaml`
+
+Examine pods
+
+`kubectl get pods`
+
+Output:
+
+```bash
+$ kubectl get pods
+NAME       READY   STATUS    RESTARTS   AGE
+monolith   1/1     Running   0          28s
+nginx      1/1     Running   0          34m
+```
+
+Use the kubectl describe command to get more information about the monolith pod.
+
+`kubectl describe pods monolith`
+
+Output:
+
+```bash
+$ kubectl describe pods monolith
+Name:             monolith
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             gk3-k0-pool-1-6b56f6a2-852v/10.186.0.5
+Start Time:       Fri, 20 Oct 2023 16:33:16 +0000
+Labels:           app=monolith
+Annotations:      autopilot.gke.io/resource-adjustment:
+                    {"input":{"containers":[{"limits":{"cpu":"200m","memory":"10Mi"},"requests":{"cpu":"200m","memory":"10Mi"},"name":"monolith"}]},"output":{...
+                  autopilot.gke.io/warden-version: 2.7.41
+Status:           Running
+SeccompProfile:   RuntimeDefault
+IP:               10.92.0.152
+IPs:
+  IP:  10.92.0.152
+Containers:
+  monolith:
+    Container ID:  containerd://215c703aa52f366769d2421c92d20f135e3c3fd483aed72293cfc9a407eb1942
+    Image:         udacity/example-monolith:1.0.0
+    Image ID:      sha256:ba09eb849ff6cdbb26632401b0b36e4b9e75ea40315358eb2256c7c0c430312e
+    Ports:         80/TCP, 81/TCP
+    Host Ports:    0/TCP, 0/TCP
+    Args:
+      -http=0.0.0.0:80
+      -health=0.0.0.0:81
+      -secret=secret
+    State:          Running
+      Started:      Fri, 20 Oct 2023 16:33:22 +0000
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:                250m
+      ephemeral-storage:  1Gi
+      memory:             512Mi
+    Requests:
+      cpu:                250m
+      ephemeral-storage:  1Gi
+      memory:             512Mi
+    Environment:          <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-2gth7 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  kube-api-access-2gth7:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Guaranteed
+Node-Selectors:              <none>
+Tolerations:                 kubernetes.io/arch=amd64:NoSchedule
+                             node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From                                   Message
+  ----    ------     ----  ----                                   -------
+  Normal  Scheduled  119s  gke.io/optimize-utilization-scheduler  Successfully assigned default/monolith to gk3-k0-pool-1-6b56f6a2-852v
+  Normal  Pulling    118s  kubelet                                Pulling image "udacity/example-monolith:1.0.0"
+  Normal  Pulled     113s  kubelet                                Successfully pulled image "udacity/example-monolith:1.0.0" in 4.669174283s (4.669201373s including waiting)
+  Normal  Created    113s  kubelet                                Created container monolith
+  Normal  Started    113s  kubelet                                Started container monolith
+```
+
+#### Interacting with Pods
+
+Cloud shell 1: set up port-forwarding
+
+`kubectl port-forward monolith 10080:80`
+
+Open new Cloud Shell session 2
+
+```bash
+curl http://127.0.0.1:10080
+
+curl http://127.0.0.1:10080/secure
+```
+
+Cloud shell 2 - log in
+
+```bash
+curl -u user http://127.0.0.1:10080/login
+
+curl -H "Authorization: Bearer <token>" http://127.0.0.1:10080/secure
+```
+
+View logs
+
+`kubectl logs monolith`
+
+or
+
+`kubectl logs -f monolith`
+
+In Cloud Shell 3
+
+`curl http://127.0.0.1:10080`
+
+In Cloud Shell 2
+
+Exit log watching (Ctrl-C)
+
+You can use the kubectl exec command to run an interactive shell inside the monolith Pod. This can come in handy when you want to troubleshoot from within a container:
+
+`kubectl exec monolith --stdin --tty -c monolith /bin/sh`
+
+For example, once we have a shell into the monolith container we can test external connectivity using the ping command.
+
+`ping -c 3 google.com`
+
+When you’re done with the interactive shell be sure to logout.
+
+`exit`
+
+### Monitoring and Helath Checks Overview
+
+[Monitor Node Health](https://kubernetes.io/docs/tasks/debug/debug-cluster/monitor-node-health/)
+
+## App Config and Security Overview
+
+[ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/)
+
+[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+
+### Creating Secrets
+
+`ls tls`
+
+Output:
+
+```bash
+$ ls tls/
+ca-key.pem  ca.pem  cert.pem  key.pem  ssl-extensions-x509.cnf  update-tls.sh
+```
+
+The cert.pem and key.pem files will be used to secure traffic on the monolith server and the ca.pem will be used by HTTP clients as the CA to trust. Since the certs being used by the monolith server where signed by the CA represented by ca.pem, HTTP clients that trust ca.pem will be able to validate the SSL connection to the monolith server.
+
+### Use kubectl
+
+to create the tls-certs secret from the TLS certificates stored under the tls directory:
+
+`kubectl create secret generic tls-certs --from-file=tls/`
+
+kubectl will create a key for each file in the tls directory under the tls-certs secret bucket. 
+Use the kubectl describe command to verify that:
+
+`kubectl describe secrets tls-certs`
+
+Next we need to create a configmap entry for the proxy.conf nginx configuration file using the kubectl create configmap command:
+
+`kubectl create configmap nginx-proxy-conf --from-file=nginx/proxy.conf`
+
+Use the kubectl describe configmap command to get more details about the nginx-proxy-conf configmap entry:
+
+`kubectl describe configmap nginx-proxy-conf`
+
+### Accessing a Secure HTTPS Endpoint
+
+`cat pods/secure-monolith.yaml`
+
+Create the secure-monolith Pod using kubectl.
+
+```bash
+kubectl create -f pods/secure-monolith.yaml
+kubectl get pods secure-monolith
+
+kubectl port-forward secure-monolith 10443:443
+
+curl --cacert tls/ca.pem https://127.0.0.1:10443
+
+kubectl logs -c nginx secure-monolith
+```
+
+### Services Overview
+
+[Service](https://kubernetes.io/docs/concepts/services-networking/service/)
+
+
+Creating a Service
+
+`cat services/monolith.yaml`
+
+Output:
+
+```bash
+$ cat services/monolith.yaml 
+kind: Service
+apiVersion: v1
+metadata:
+  name: "monolith"
+spec:
+  selector:
+    app: "monolith"
+    secure: "enabled"
+  ports:
+    - protocol: "TCP"
+      port: 443
+      targetPort: 443
+      nodePort: 31000
+  type: NodePort
+```
+
+`kubectl create -f services/monolith.yaml`
+
+Output:
+
+```bash
+$ kubectl create -f services/monolith.yaml
+service/monolith created
+```
+
+Use the `gcloud compute firewall-rules` command to allow traffic to the monolith service on the exposed node port.
+
+`gcloud compute firewall-rules create allow-monolith-nodeport --allow=tcp:31000`
+
+Output:
+
+```bash
+$ gcloud compute firewall-rules create allow-monolith-nodeport --allow=tcp:31000
+Creating firewall...working..Created [https://www.googleapis.com/compute/v1/projects/prjtscalablemicrosrvcswithk8s/global/firewalls/allow-monolith-nodeport].                  
+Creating firewall...done.                                                                                                                                                      
+NAME: allow-monolith-nodeport
+NETWORK: default
+DIRECTION: INGRESS
+PRIORITY: 1000
+ALLOW: tcp:31000
+DENY: 
+DISABLED: False
+```
+
+Use 
+
+`gcloud compute instances list`
+
+to get the ip address for one of our nodes. Then try hitting the secure monolith service using curl:
+
+`curl -k https://<ip address>`
+
+
+### Adding Labels to Pods
+
+Currently the monolith service does not have any endpoints. Use 
+
+`kubectl get pods -l "app=monolith"`
+
+and also 
+
+`kubectl get pods -l "app=monolith,secure=enabled"`
+
+`kubectl describe pods secure-monolith | grep Labels`
+
+We can use the command: 
+
+`kubectl label pods secure-monolith "secure=enabled"`
+
+to add the secure=enabled label to the secure-monolith pod.
+
+`kubectl describe pods secure-monolith | grep Labels`
+
+Use:
+
+`kubectl describe services monolith | grep Endpoints`
+
+to see the list of end points on the monolith service.
+
+## Deploying Microservices
+
+To declare the desired state of your infrastructur, means writing Kubernetes configs.
+Kubernetes configs allows us to manage secrets and how we want the updates to our applications roled out.
+
+Desired State - You can tell Kubernetes what you want and Kubernetes will do the heavy lifting behind the scenes, such as deploying containers and creating load balancers as required. 
+
+
 
 ## Resources
 - [Udacity](https://learn.udacity.com/)
@@ -584,5 +961,7 @@ sudo docker push <your username>/example-monolith:1.0.0
 - [JSON Web Tokens (JWT)](https://jwt.io/)
 - [How Docker works and how you can use it](https://www.docker.com/what-docker)
 - [Introduction to Docker](https://opensource.com/resources/what-docker)
+- [Kubernetes command cheat sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+- [Transport Layer Security](https://en.wikipedia.org/wiki/Transport_Layer_Security)
 - [Book - Kubernetes: Up and Running, by Joe Beda, Kelsey Hightower, Brendan Burns, Publisher O'Reilly](https://www.oreilly.com/library/view/kubernetes-up-and/9781491935668/)
 - [Book - Building Microservices, by Sam Newman, Publisher O'Reilly](https://www.oreilly.com/library/view/building-microservices/9781491950340/)
