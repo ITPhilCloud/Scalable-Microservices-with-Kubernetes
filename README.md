@@ -946,6 +946,16 @@ Kubernetes configs allows us to manage secrets and how we want the updates to ou
 
 Desired State - You can tell Kubernetes what you want and Kubernetes will do the heavy lifting behind the scenes, such as deploying containers and creating load balancers as required. 
 
+### Deployments
+Deployments are a declarative way of saying what goes where. Behind the scenes deployments use a Kubernetes concept called replicasets to ensure the current number of pods equals the desired number. Deployments abstract the low level detail of managing pods, eg. what node is my pod on.
+Pods are tied to the lifetime of the node, so when the node goes away so does the pod. Instead of managing that, we can use deployments to make our life easier.
+
+In this example you see we have a pod with one replica
+
+<img width="200px" src="assets/single-replica.jpg"/>
+
+
+What happens if you change the number of replicas from one to three?
 
 
 ## Resources
