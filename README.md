@@ -952,10 +952,133 @@ Pods are tied to the lifetime of the node, so when the node goes away so does th
 
 In this example you see we have a pod with one replica
 
-<img width="200px" src="assets/single-replica.jpg"/>
+<img width="600px" src="assets/single-replica.jpg"/>
 
 
-What happens if you change the number of replicas from one to three?
+What happens if you change the number of replicas from one to three? Our deployment will ensure the number of replicas in production will matches our desire state. 
+
+
+<img width="600px" src="assets/three-replica.jpg"/>
+
+This means that even if a node goes down, the deployment will start a new pod and find somewhere to put it for us.
+
+
+<img width="600px" src="assets/node-fail.jpg"/>
+
+#### Creating Deployments
+
+Now we are ready to create deployments, one for each service. Frontend, Auth, and Hello. Then we will define internal service for the Auth and Hello deployments and an external service for the Frontend deployment.
+
+Let's examine the auth configuration file.
+
+`cat deployments/auth.yaml`
+
+First thing is to specify the number of replicas. This deployment can be used to scale pods by changing the replica count in our manifest.
+
+Moving on, you can see the label that will be attached to the auth pod. A little further down, you will see we are using version 1.0 of the auth container.
+
+Use the `kubectl create` command to create the auth deployment
+
+`kubectl create -f deployments/auth.yaml`
+
+As with any other Kubernetes object, we can use the `describe` command to more information about the auth deployment
+
+`kubectl describe deployments auth`
+
+
+So now to create a service for our Auth deployemnt. Use the `Kubectl create` command
+
+`kubectl create -f services/auth.yaml`
+
+to create the auth service.
+
+
+Now, do the same thing to create and expose the hello deployment.
+
+`kubectl create -f deployments/hello.yaml`
+
+`kubectl create -f services/hello.yaml`
+
+
+And more time for the Frontend deployment.
+
+`kubectl create configmap nginx-frontend-conf --from-file=nginx/frontend.conf`
+
+
+We will also need to confgure nginx.
+
+`kubectl create -f deployments/frontend.yaml`
+
+`kubectl create -f services/frontend.yaml`
+
+
+Now we are ready to interact with the frontend by grabbing its external IP address and using `curl` to hit it
+
+`kubectl get services frontend`
+
+`curl -k https://<ip adress>`
+
+## Scaling
+### Scaling Overview
+
+Scaling is done by updating the replicase field in our deployment manifest. This is a best practise because even though we could us imperative methods like the `kubectl scale` command, then there is no state saved anywhere. Under the hood, deployments create a replicaset to handle pod creation, deletion, and updates. Deployments own and manage the replicasets for us, so we don't have to manage them.
+
+Using our deployments this way makes scaling up and down easy.
+
+
+<img width="600px" src="assets/scaling1.jpg"/>
+
+
+### Scaling Deployments
+
+Behind the scenes deployments manage replicasets. Each deployment is mapped to one active replicaset.
+Use the 
+
+`kubectl get replicasets`
+
+command, to view the current set of replicas.
+
+Replicasets are scaled to the deployment for each service and can be scaled independently. The real strength of Kubernetes is working in a declerative
+way, instead of using imperative `scale` and `expose` commands.
+
+To scale the Frontend deployment using the existing deployment configuration file.
+
+First, check how many of our hello pods are running.
+
+`kubectl get pods -l "app=hello,track=stable"`
+
+
+Currently we only have one. Update the replicas field of our deployment manifest to 3. Then we will apply the change.
+
+`kubectl apply -f deployments/hello.yaml`
+
+Look at the replicasets, to see what is happening.
+
+`kubectl get replicasets`
+
+The desired number of replicas was updated.
+
+
+I can use the `get pods` command to watch the pods come online.
+
+`kubectl get pods`
+
+Now we can check that the deployment updated to the correct number of replicase.
+
+`kubectl describe deployment hello`
+
+and we can still hit the endpoint, like before
+
+`kubectl get services`
+
+`curl -k https://<ip address>`
+
+Now we have multiple copies of our hello service running in Kubernetes, and we have a single frontend service that is proxying traffic to all three pods. This allow us to share the load and scale our container in Kubernetes.
+
+### Updating Overview
+
+
+
 
 
 ## Resources
