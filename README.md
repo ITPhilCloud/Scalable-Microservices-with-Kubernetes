@@ -1075,9 +1075,61 @@ and we can still hit the endpoint, like before
 
 Now we have multiple copies of our hello service running in Kubernetes, and we have a single frontend service that is proxying traffic to all three pods. This allow us to share the load and scale our container in Kubernetes.
 
+## Updating
 ### Updating Overview
 
+What happens when you want to update? 
 
+Obvisouly we want to update our containers to protext our data, and get new code infront of users, but it would be risky to roll those changes out all at once. Instead we use `kubectl rollout`.
+
+<img width="600px" src="assets/update1.jpg"/>
+
+
+After issuing our `kubectl rollout` command for v2 of our app, one comes online.
+
+<img width="600px" src="assets/update2.jpg"/>
+
+Then our service start routing traffic to it. So we have both v1 and v2 getting traffic at the same time.
+
+<img width="600px" src="assets/update3.jpg"/>
+
+
+Next, we stop routing traffic to one of the old pods and we get rid of it entirely.
+
+<img width="600px" src="assets/update4.jpg"/>
+
+At this point the cycle continues, all the way until we have our desired 3 replicas back.
+
+<img width="600px" src="assets/update5.jpg"/>
+
+
+### Rolling Updates 
+
+Let's modify the auth deployment configuration file to use version 2 of the auth container image.
+
+`vim deployments/auth.yaml`
+
+Now we will apply our update using the `kubectl apply command`
+
+`kubectl apply -f deployments/auth.yaml`
+
+We can track the progress of our auth deployment using the `kubectl describe deployments` command.
+
+`kubectl describe deployments auth`
+
+Once the rolling update is complete, we can view the runnning pod for the auth service.
+
+`kubectl get pods`
+
+Notice how long they have been running. The new version of the auth pods have replaced the previous ones.
+
+We can verify that the auth pod is running the new version of the auth container using the 
+
+`kubectl describe pods <pod name>`
+
+command.
+
+Kubernetes makes it easy to rollout changes to our applications using a declarative approach. Whether you have one or one hundred pods in a deployment, Kubernetes makes it easy to update them using a few simple commands.
 
 
 
